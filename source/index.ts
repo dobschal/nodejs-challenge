@@ -11,6 +11,7 @@ import { createUnzip } from "zlib";
 
 function decryptTofile(filename: string) {
     console.log("Decrypt file...");
+    const t1 = Date.now();
     const encryptedContent = readFileSync("secret.enc");
     const algorithm = "aes-256-gcm";
     const key = readFileSync("secret.key", "utf-8").substring(0, 32);
@@ -22,26 +23,33 @@ function decryptTofile(filename: string) {
 
     const output = Buffer.concat([decipher.update(encryptedContent), decipher.final()]);
     writeFileSync(filename, output);
-    console.log("Decrypt done.");
+    console.log(`Decrypt done in ${Date.now() - t1}ms.`);
 }
 
 function unpackFile(filename, outputFileName): Promise<void> {
     return new Promise((resolve, reject) => {
         console.log("Unzip file...");
+        const t1 = Date.now();
         const unzip = createUnzip();
         const inputStream = createReadStream(filename);
         const outputStream = createWriteStream(outputFileName);
         pipeline(inputStream, unzip, outputStream, (error) => {
             if (error) return reject(error);
             resolve();
-            console.log("Unzip file done.");
+            console.log(`Unzipped file in ${Math.floor((Date.now() - t1) / 1000)}sec`);
         });
     });
 }
 
 function sumIt(filename: string) {
+    console.log("Start summing...");
+    const t1 = Date.now();
     const readStream = createReadStream(filename);
     let sum = 0;
+
+    const interval = setInterval(() => {
+        console.log("Sum: ", sum);
+    }, 1000);
 
     readStream.on('data', chunk => {
         const str = chunk.toString("utf8");
@@ -65,10 +73,11 @@ function sumIt(filename: string) {
     });
 
     readStream.on('open', () => {
-        console.log('Summing...');
+        console.log('Stream open...');
     });
 
     readStream.on('end', () => {
-        console.log("Summing done: ", sum);
+        console.log(`Summing done in ${Math.floor((Date.now() - t1) / 1000)}sec`, sum);
+        clearInterval(interval);
     });
 }
