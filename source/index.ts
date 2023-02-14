@@ -1,16 +1,26 @@
 import { createDecipheriv } from "crypto";
 import { createReadStream, createWriteStream, readFileSync, writeFileSync } from "fs";
+import { createServer } from "http";
 import { pipeline } from "stream";
 import { createUnzip } from "zlib";
 
 (async function () {
-    await sumIt("clear_smaller.txt");
-    await sumPerSentence("clear_smaller.txt");
-    process.exit();
+
+    // Aufgabe 4
+    startServer();
+
+    // Aufgabe 1
     decryptTofile("decrypted.zip");
     await unpackFile("decrypted.zip", "decrypted.txt");
+
+    // Aufgabe 2 und 3
+    await sumIt("decrypted.txt");
+
+    // Aufgabe 4
+    await sumPerSentence("decrypted.txt");
 })();
 
+// Aufgabe 1
 function decryptTofile(filename: string) {
     console.log("Decrypt file...");
     const t1 = Date.now();
@@ -28,6 +38,7 @@ function decryptTofile(filename: string) {
     console.log(`Decrypt done in ${Date.now() - t1}ms.`);
 }
 
+// Aufgabe 1
 function unpackFile(filename, outputFileName): Promise<void> {
     return new Promise((resolve, reject) => {
         console.log("Unzip file...");
@@ -43,6 +54,7 @@ function unpackFile(filename, outputFileName): Promise<void> {
     });
 }
 
+// Aufgabe 2 und 3
 function sumIt(filename: string): Promise<void> {
     return new Promise((resolve) => {
         console.log("Start summing...");
@@ -87,6 +99,7 @@ function sumIt(filename: string): Promise<void> {
     });
 }
 
+// Aufgabe 4... 
 function sumPerSentence(filename: string): Promise<void> {
     return new Promise((resolve) => {
         console.log("Start summing sum in sentences...");
@@ -105,17 +118,8 @@ function sumPerSentence(filename: string): Promise<void> {
                     sumPerSentence.push(0);
                 }
                 const sumInChunk = str
-                    .match(/[\daioeuAUOEI]/g)
-                    ?.map(letter => {
-                        switch (letter) {
-                            case "a": case "A": return 2;
-                            case "e": case "E": return 4;
-                            case "i": case "I": return 8;
-                            case "o": case "O": return 16;
-                            case "u": case "U": return 32;
-                            default: return Number(letter);
-                        }
-                    })
+                    .match(/\d/g)
+                    ?.map(n => Number(n))
                     .reduce(
                         (accumulator, currentValue) => accumulator + currentValue,
                         0
@@ -132,7 +136,44 @@ function sumPerSentence(filename: string): Promise<void> {
             console.log(`Summing sum in sentences done in ${Math.floor((Date.now() - t1) / 1000)}sec. Sentences: `, sumPerSentence.length);
             console.log("Sum per sentences: ", sumPerSentence);
             clearInterval(interval);
+
+            const tenGreatestValues: number[] = [];
+
+            sumPerSentence.forEach(sum => {
+                tenGreatestValues.sort((a, b) => b - a);
+                if (tenGreatestValues.length < 10) {
+                    tenGreatestValues.push(sum);
+                } else if (tenGreatestValues.some(v => v < sum)) {
+                    tenGreatestValues.pop();
+                    tenGreatestValues.push(sum);
+                }
+            });
+            console.log("Ten largest values: ", tenGreatestValues);
+
+            const tenGreatestOrdered = sumPerSentence.filter(s => tenGreatestValues.some(t => t <= s));
+
+            const tenGreatestValuesMinusIndex = tenGreatestOrdered.map((t, index) => t - index);
+            console.log("Ten largest values minus index: ", tenGreatestValuesMinusIndex);
+
+            console.log("Word: ", String.fromCharCode(...tenGreatestValuesMinusIndex));
+
             resolve();
         });
+    });
+}
+
+function startServer() {
+    const word = "nodejs@red"; // from "Aufgabe 4"
+    const port = 3000;
+    const host = "localhost";
+
+    const requestListener = function (req, res) {
+        res.writeHead(200);
+        res.end("Code: " + word);
+    };
+
+    const server = createServer(requestListener);
+    server.listen(port, host, () => {
+        console.log(`Server is providing code word on http://${host}:${port}`);
     });
 }
