@@ -1,2 +1,6 @@
 /node_modules
 .DS_Store
+/decrypted
+/decrypted.zip
+/source/index.js
+/source/index.js.map
